@@ -98,12 +98,8 @@ To save your email for future sessions, set `preserve = TRUE`
 ala_config(email = , preserve = TRUE)
 ```
 
-```{r include = FALSE}
-occ <- read.csv("banksia.csv")
-```
-
 Download occurrence records for 5 Banksia species
-```{r eval = FALSE}
+```{r}
 occ <- ala_occurrences(taxon_id = top5_banksia)
 ```
 
@@ -111,8 +107,8 @@ occ <- ala_occurrences(taxon_id = top5_banksia)
 head(occ)
 ```
 
-
-```{r eval = FALSE}
+Use `ala_columns` to download an extra field, and `ala_filters` to narrow the search to records from 2000 onwards.
+```{r}
 # build filters and columns
 cols <- ala_columns(group = "basic", extra = "country")
 filters <- ala_filters(list(year = seq(2000, 2020)))
@@ -137,7 +133,7 @@ ggplot() + geom_sf(data = ozmap_country) +
 
 ## Customising searches
 Occurrence searches can be narrowed down by area, a variety of filters, and data quality tests. 
-```{r eval=FALSE, message=FALSE, warning=FALSE}
+```{r message=FALSE, warning=FALSE}
 # Find all reptiles within a shapefile
 id <- ala_taxa("Ornithorhynchus anatinus")
 simple_shp <- st_cast(st_read('act_rect.shp'), "MULTIPOLYGON")
@@ -145,10 +141,6 @@ simple_shp <- st_cast(st_read('act_rect.shp'), "MULTIPOLYGON")
 occ <- ala_occurrences(taxon_id = id, geometry = ala_geometry(area = simple_shp))
 ```
 
-```{r include = FALSE}
-occ <- read.csv("ornithorhynchus_anatinus.csv")
-simple_shp <- st_cast(st_read('act_rect.shp'), "MULTIPOLYGON")
-```
 
 ```{r}
 ggplot() + geom_sf(data = simple_shp) +
