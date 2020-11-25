@@ -95,7 +95,7 @@ ala_taxa(term = id, term_type = "identifier")
 Download occurrence data for a taxon. To download occurrence data you will need to specify your email in `ala_config()`. This email must be associated with an active ALA account.
 To save your email for future sessions, set `preserve = TRUE`
 ```{r}
-ala_config(email = "ala4r@ala.org.au", preserve = TRUE)
+ala_config(email = , preserve = TRUE)
 ```
 
 ```{r include = FALSE}
