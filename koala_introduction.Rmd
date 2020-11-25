@@ -68,7 +68,6 @@ Retrieve information for a taxon or taxa. For each taxon, provide a scientific n
 The output of `ala_taxa()` can be used as the `taxon_id` parameter in other functions. 
 ```{r}
 # A single taxa
-browser()
 ala_taxa("Dasyurus viverrinus")
 ```
 
