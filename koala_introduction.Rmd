@@ -1,0 +1,203 @@
+---
+title: "ALA4R"
+author: "Matilda Stevenson"
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ALA4R}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+# ALA4R
+
+```{r setup, include=FALSE}
+library(knitr)
+options(width=120)
+```
+
+ALA4R enables the R community to directly access data hosted by the Atlas of Living Australia (ALA).
+
+The ALA aggregates Australian biodiversity data from a range of sources, and makes the data freely available for scientists, policy makers, industry and the general public.
+
+## Installing ALA4R
+
+Development version from GitHub:
+
+```{r eval=FALSE}
+install.packages("devtools")
+devtools::install_github("AtlasOfLivingAustralia/ALA4R@dev")
+```
+
+On Linux you will first need to ensure that `libcurl` and `v8` (version <= 3.15) are installed on your system --- e.g. on Ubuntu/Debian, open a terminal and do:
+
+```{sh eval=FALSE}
+sudo apt-get install libcurl4-openssl-dev libv8-3.14-dev
+```
+or install via the Software Centre.
+
+
+## Using ALA4R
+
+The ALA4R package must be loaded for each new R session:
+
+```{r}
+library(ALA4R)
+```
+
+
+## Example usage
+
+First, check that we have some additional packages that we'll use in the examples, and install them if necessary.
+```{r message=FALSE}
+to_install <- c("dplyr", "ggplot2", "ozmaps", "sf")
+to_install <- to_install[!sapply(to_install, requireNamespace, quietly=TRUE)]
+if(length(to_install)>0)
+    install.packages(to_install, repos="http://cran.us.r-project.org")
+
+## In these examples we use the `dplyr` package to help with data manipulation.
+library(dplyr)
+library(ggplot2)
+library(ozmaps)
+library(sf)
+```
+
+## Taxon information
+Retrieve information for a taxon or taxa. For each taxon, provide a scientific name at one or more ranks, or an ALA taxon id.
+
+The output of `ala_taxa()` can be used as the `taxon_id` parameter in other functions. 
+```{r}
+# A single taxa
+browser()
+ala_taxa("Dasyurus viverrinus")
+```
+
+`ala_taxa` can optionally include record counts for a taxon, and the child concepts of the supplied taxon.
+```{r}
+banksia <- ala_taxa(list(genus = "Banksia"), return_children = TRUE, include_counts = TRUE)
+
+# Select only the species-level taxa, sort by count, and display the top 5
+top5_banksia <- banksia %>% filter(rank == "species") %>%
+  arrange(desc(count)) %>%
+  select(scientific_name, taxon_concept_id, count) %>%
+  head(n = 5)
+
+top5_banksia
+```
+
+
+Use `ala_taxa` to lookup a taxon id
+```{r}
+id <- "urn:lsid:biodiversity.org.au:afd.taxon:d315deea-822c-4f2c-b439-da33d6af5fd6"
+ala_taxa(term = id, term_type = "identifier")
+```
+
+## Occurrence data
+Download occurrence data for a taxon. To download occurrence data you will need to specify your email in `ala_config()`. This email must be associated with an active ALA account.
+To save your email for future sessions, set `preserve = TRUE`
+```{r}
+ala_config(email = "ala4r@ala.org.au", preserve = TRUE)
+```
+
+```{r include = FALSE}
+occ <- read.csv("banksia.csv")
+```
+
+Download occurrence records for 5 Banksia species
+```{r eval = FALSE}
+occ <- ala_occurrences(taxon_id = top5_banksia)
+```
+
+```{r}
+head(occ)
+```
+
+
+```{r eval = FALSE}
+# build filters and columns
+cols <- ala_columns(group = "basic", extra = "country")
+filters <- ala_filters(list(year = seq(2000, 2020)))
+occ <- ala_occurrences(taxon_id = top5_banksia,
+                       columns = cols, filters = filters)
+```
+
+
+```{r}
+filtered_occ <- occ %>% filter(country == "Australia")
+head(filtered_occ)
+```
+
+Plot occurrence data using `ggplot`
+```{r warning=FALSE, out.width="100%", fig.width=100, eval = FALSE}
+ggplot() + geom_sf(data = ozmap_country) +
+  geom_point(filtered_occ, mapping = aes(x = decimalLongitude, y = decimalLatitude,
+                                         colour = scientificName),size = .3)
+
+```
+
+
+## Customising searches
+Occurrence searches can be narrowed down by area, a variety of filters, and data quality tests. 
+```{r eval=FALSE, message=FALSE, warning=FALSE}
+# Find all reptiles within a shapefile
+id <- ala_taxa("Ornithorhynchus anatinus")
+simple_shp <- st_cast(st_read('act_rect.shp'), "MULTIPOLYGON")
+
+occ <- ala_occurrences(taxon_id = id, geometry = ala_geometry(area = simple_shp))
+```
+
+```{r include = FALSE}
+occ <- read.csv("ornithorhynchus_anatinus.csv")
+simple_shp <- st_cast(st_read('act_rect.shp'), "MULTIPOLYGON")
+```
+
+```{r}
+ggplot() + geom_sf(data = simple_shp) +
+  geom_point(data = occ, mapping = aes(x = decimalLongitude, y = decimalLatitude))
+
+```
+
+### Environmental layers
+```{r}
+# Get all layers relating to precipitation
+layers <- ala_layers()
+layers[grepl("precipitation", tolower(layers$description)),]$name
+
+```
+
+### Fields and categories
+`ala_fields()` displays all the fields available for filtering and `ala_categories` displays all the valid categorical values for a given field.
+
+### Data quality profile
+By default, the data quality profile is set to the ALA general.
+```{r}
+# List available data quality profiles
+ala_data_profiles()
+
+# List filters for a profile
+ala_quality_filters("CSDM")
+```
+
+## Summary statistics
+```{r}
+# Total number of records in the ALA (with no data quality filters)
+ala_counts()
+
+# Total number of records, broken down by kindgom
+ala_counts(breakdown = "kingdom")
+```
+
+
+## Media downloads
+```{r warning=FALSE, message=FALSE, eval = FALSE}
+# Search for occurrences with images
+filters <- ala_filters(list("multimedia" = "Image",
+                                      basis_of_record = "HumanObservation"))
+occ <- ala_occurrences(quoll$taxon_concept_id,
+                       filters = filters)
+images <- ala_media(head(occ$recordID, n = 5), download_dir = 'data/',
+                    identifier_type = "occurrence")
+
+# filter by licence type
+images %>% filter(recognisedLicence == "CC BY-NC 4.0")
+```
