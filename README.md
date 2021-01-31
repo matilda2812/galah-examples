@@ -1,2 +1,2 @@
-# koala-examples
-Examples for ALA's R package
+# galah-examples
+Usage examples for [galah](https://github.com/AtlasOfLivingAustralia/galah)
